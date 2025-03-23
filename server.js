@@ -32,14 +32,19 @@ app.post('/register', async (req, res) => {
 });
 
 app.post('/login', (req, res) => {
-  const { email, password } = req.body;
-  db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
-    if (err || !user) return res.status(400).json({ message: 'Usuario no encontrado' });
-    const match = await bcrypt.compare(password, user.password);
-    if (!match) return res.status(400).json({ message: 'Contraseña incorrecta' });
-    res.json({ message: 'Login exitoso', username: user.username });
-  });
+    const { email, password } = req.body;
+    db.get("SELECT * FROM users WHERE email = ?", [email], (err, user) => {
+        if (!user || !bcrypt.compareSync(password, user.password)) {
+            return res.json({ message: "Credenciales incorrectas" });
+        }
+        
+        // Si el usuario es "admin", le damos el rol de admin
+        const role = user.username === "admin" ? "admin" : "user";
+        
+        res.json({ message: "Login exitoso", username: user.username, role });
+    });
 });
+
 
 app.get('/users', (req, res) => {
   db.all('SELECT id, username, email FROM users', [], (err, rows) => {

@@ -1,69 +1,147 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Registro y Login</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autenticación</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        nav {
+            background-color: #333;
+            color: white;
+            padding: 10px;
+            display: flex;
+            justify-content: space-between;
+        }
+        nav a {
+            color: white;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        .container {
+            width: 50%;
+            margin: auto;
+            padding: 20px;
+            background: white;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-top: 20px;
+            border-radius: 5px;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
 </head>
 <body>
-  <h1>Registro</h1>
-  <form id="registerForm">
-    <input type="text" placeholder="Username" id="regUsername" required><br>
-    <input type="email" placeholder="Email" id="regEmail" required><br>
-    <input type="password" placeholder="Password" id="regPassword" required><br>
-    <button type="submit">Registrar</button>
-  </form>
 
-  <h1>Login</h1>
-  <form id="loginForm">
-    <input type="email" placeholder="Email" id="loginEmail" required><br>
-    <input type="password" placeholder="Password" id="loginPassword" required><br>
-    <button type="submit">Iniciar sesión</button>
-  </form>
+    <nav>
+        <div>
+            <a href="#" onclick="showView('register')">Registrarse</a>
+            <a href="#" onclick="showView('login')">Iniciar Sesión</a>
+            <a href="#" id="usersTab" class="hidden" onclick="showView('users')">Usuarios Registrados</a>
+        </div>
+        <div>
+            <span id="usernameDisplay"></span>
+            <a href="#" onclick="logout()" id="logoutBtn" class="hidden">Cerrar Sesión</a>
+        </div>
+    </nav>
 
-  <h1>Usuarios registrados</h1>
-  <button onclick="getUsers()">Mostrar usuarios</button>
-  <ul id="userList"></ul>
+    <div class="container" id="register">
+        <h2>Registro</h2>
+        <input type="text" id="regUsername" placeholder="Username"><br>
+        <input type="email" id="regEmail" placeholder="Email"><br>
+        <input type="password" id="regPassword" placeholder="Password"><br>
+        <button onclick="register()">Registrar</button>
+    </div>
 
-<script>
-  document.getElementById('registerForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const username = document.getElementById('regUsername').value;
-    const email = document.getElementById('regEmail').value;
-    const password = document.getElementById('regPassword').value;
-    const res = await fetch('/register', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, email, password })
-    });
-    const data = await res.json();
-    alert(data.message);
-  });
+    <div class="container hidden" id="login">
+        <h2>Login</h2>
+        <input type="email" id="loginEmail" placeholder="Email"><br>
+        <input type="password" id="loginPassword" placeholder="Password"><br>
+        <button onclick="login()">Iniciar sesión</button>
+    </div>
 
-  document.getElementById('loginForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const email = document.getElementById('loginEmail').value;
-    const password = document.getElementById('loginPassword').value;
-    const res = await fetch('/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password })
-    });
-    const data = await res.json();
-    alert(data.message);
-  });
+    <div class="container hidden" id="users">
+        <h2>Usuarios Registrados</h2>
+        <button onclick="getUsers()">Mostrar usuarios</button>
+        <ul id="usersList"></ul>
+    </div>
 
-  async function getUsers() {
-    const res = await fetch('/users');
-    const users = await res.json();
-    const userList = document.getElementById('userList');
-    userList.innerHTML = '';
-    users.forEach(user => {
-      const li = document.createElement('li');
-      li.textContent = `${user.username} (${user.email})`;
-      userList.appendChild(li);
-    });
-  }
-</script>
+    <script>
+        function showView(view) {
+            document.getElementById("register").classList.add("hidden");
+            document.getElementById("login").classList.add("hidden");
+            document.getElementById("users").classList.add("hidden");
+            document.getElementById(view).classList.remove("hidden");
+        }
+
+        function register() {
+            const username = document.getElementById("regUsername").value;
+            const email = document.getElementById("regEmail").value;
+            const password = document.getElementById("regPassword").value;
+
+            fetch("/register", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ username, email, password })
+            }).then(res => res.json()).then(data => alert(data.message));
+        }
+
+        function login() {
+            const email = document.getElementById("loginEmail").value;
+            const password = document.getElementById("loginPassword").value;
+
+            fetch("/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ email, password })
+            }).then(res => res.json()).then(data => {
+                if (data.message === "Login exitoso") {
+                    localStorage.setItem("username", data.username);
+                    localStorage.setItem("role", data.role);
+                    updateUI();
+                } else {
+                    alert("Credenciales incorrectas");
+                }
+            });
+        }
+
+        function getUsers() {
+            fetch("/users").then(res => res.json()).then(data => {
+                const usersList = document.getElementById("usersList");
+                usersList.innerHTML = "";
+                data.forEach(user => {
+                    usersList.innerHTML += `<li>${user.username} (${user.email})</li>`;
+                });
+            });
+        }
+
+        function updateUI() {
+            const username = localStorage.getItem("username");
+            const role = localStorage.getItem("role");
+
+            if (username) {
+                document.getElementById("usernameDisplay").innerText = `Hola, ${username}`;
+                document.getElementById("logoutBtn").classList.remove("hidden");
+
+                if (role === "admin") {
+                    document.getElementById("usersTab").classList.remove("hidden");
+                }
+            }
+        }
+
+        function logout() {
+            localStorage.clear();
+            location.reload();
+        }
+
+        updateUI();
+    </script>
+
 </body>
 </html>
